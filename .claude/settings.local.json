@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)"
+    ],
+    "deny": []
+  },
+  "enabledMcpjsonServers": [
+    "context7",
+    "sequential-thinking",
+    "mcp-feedback-enhanced",
+    "playwright",
+    "mcp-server-time",
+    "mcp-deepwiki",
+    "mcp-server-firecrawl",
+    "task-master-ai",
+    "desktop-commander",
+    "github"
+  ]
+}
