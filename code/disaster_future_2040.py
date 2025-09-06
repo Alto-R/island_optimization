@@ -308,8 +308,8 @@ fixed_om_cost = {'WT': 43, 'PV': 23,'LNG': 14,'WEC': 300,'CHP': 26,'EB': 5,'AC':
 }
 
 efficiency = {
-    'CHP': (0.4, 0.5), 'EB': 0.9, 'PEM': 0.8, 'LNGV': (50, 0.6, 0.99), 'FC': (0.6,0.5), 'AC':0.95, 
-    'ESS': (0.9, 0.9), 'TES': (0.9, 0.9),'CES': (0.9, 0.9),'H2S': (0.9, 0.9)   
+    'CHP': (0.4, 0.5), 'EB': 0.9, 'PEM': 0.8, 'LNGV': (300, 0.6, 0.99), 'FC': (0.6,0.5), 'AC': 3, 
+    'ESS': (0.9, 0.9), 'TES': (0.9, 0.9),'CES': (0.85, 0.85),'H2S': (0.4, 0.4)   
 }
 
 wave_length = 1000 
@@ -769,7 +769,7 @@ def integrated_optimization_model():
         eta_LNGV, eta_LNGV_C, eta_LNGV_G = efficiency['LNGV'] 
         model.addConstr(power_consumption_LNGV[t] == LNGV_gas_output[t] / eta_LNGV,  name=f"LNGV_power_constraint_{t}")
         model.addConstr(output['LNG', t] * LNG_value == (LNGV_gas_output[t] / eta_LNGV_G) * 3, name=f"LNGV_LNG_constraint_{t}")
-        model.addConstr(LNGV_cold_output[t] == LNGV_gas_output[t] * eta_LNGV_C, name=f"LNGV_cold_constraint_{t}")
+        model.addConstr(LNGV_cold_output[t] == eta_LNGV_C * (LNGV_gas_output[t] / eta_LNGV_G), name=f"LNGV_cold_constraint_{t}")
         model.addConstr(LNGV_gas_output[t] >= 0, name=f"LNGV_min_output_{t}")
         model.addConstr(LNGV_gas_output[t] + LNGV_cold_output[t] <= capacity_dict['LNGV'],name= f"LNGV_max_output_{t}")
         model.addConstr(output['LNGV', t] == LNGV_cold_output[t] + LNGV_gas_output[t], name=f"LNGV_output_balance_{t}")

@@ -14,7 +14,10 @@
       "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
       "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
       "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
-      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)"
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\visualization/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\result/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver\\result\\GNP/**)",
+      "Read(c:\\Users\\18130\\Desktop\\island_optimization_newver/**)"
     ],
     "deny": []
   },
