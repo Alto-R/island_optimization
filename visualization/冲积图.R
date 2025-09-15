@@ -14,7 +14,7 @@ library(RColorBrewer)
 
 # 步骤 2: 读取您的数据
 # 确保 CSV 文件位于您的 R 工作目录中，或提供完整路径
-df <- read.csv("chongji_for_R.csv", stringsAsFactors = FALSE)
+df <- read.csv("chongji_for_R_2.csv", stringsAsFactors = FALSE)
 
 # 步骤 3: 数据预处理和清理
 # 查看数据结构
@@ -140,7 +140,7 @@ print("保存图表...")
 
 # 保存四列冲积图
 ggsave("alluvial_four_column.png", alluvial_four_column,
-       width = 12, height = 6, dpi = 300, bg = "white")
+       width = 8, height = 8, dpi = 300, bg = "white")
 
 # 也可以保存为PDF格式以便后续编辑
 # ggsave("alluvial_four_column.pdf", alluvial_four_column,
@@ -149,6 +149,6 @@ ggsave("alluvial_four_column.png", alluvial_four_column,
 print("图表已保存完成！")
 print("生成的文件:")
 print("- alluvial_four_column.png: 四列冲积图（PNG格式）")
-print("- alluvial_four_column.pdf: 四列冲积图（PDF格式）")
+# print("- alluvial_four_column.pdf: 四列冲积图（PDF格式）")
 print("图表展示了岛屿从地理区域到不同情景分类的流向变化")
 
