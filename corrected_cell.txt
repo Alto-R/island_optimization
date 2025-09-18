@@ -1,0 +1,328 @@
+"""
+结合最后一个cell的可视化经纬向分布的代码，画出上面三个全球地图的经纬向分布图
+使用地图中相同的颜色方案：
+1. 供暖需求分布图 - 红色系 (#fff5f0 到 #99000d)
+2. WT季节性分布图 - 蓝色系 (#f7fbff 到 #084594) 
+3. WEC季节性分布图 - 绿色系 (#f7fcf5 到 #005a32)
+"""
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.ticker import ScalarFormatter
+from scipy.interpolate import make_interp_spline
+import os
+import glob
+import warnings
+from tqdm import tqdm
+
+warnings.filterwarnings('ignore')
+
+def create_longitude_profile_colored(data, column, ax=None, colors=None, label=''):
+    """创建经度方向的彩色曲线图"""
+    plt.rcParams['font.family'] = 'Arial'
+    
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(14, 1.5), dpi=500)
+    
+    # 根据数据类型选择默认颜色
+    if colors is None:
+        colors = ['#ff0000', '#cc0000']  # 默认红色
+        
+    # 按经度分组计算sum值
+    lon_bins = np.arange(-180, 181, 5)  # 5度一组
+    lon_centers = (lon_bins[:-1] + lon_bins[1:]) / 2
+    lon_values = []
+    
+    for i in range(len(lon_bins)-1):
+        mask = (data['lon'] >= lon_bins[i]) & (data['lon'] < lon_bins[i+1])
+        if mask.any():
+            lon_values.append(data.loc[mask, column].sum())
+        else:
+            lon_values.append(0)
+    
+    # 平滑曲线
+    if len(lon_centers) > 3:
+        lon_smooth = np.linspace(min(lon_centers), max(lon_centers), 300)
+        spline = make_interp_spline(lon_centers, lon_values, k=3)
+        lon_values_smooth = spline(lon_smooth)
+        lon_values_smooth = np.maximum(lon_values_smooth, 0)
+    else:
+        lon_smooth = lon_centers
+        lon_values_smooth = lon_values
+    
+    # 绘制曲线
+    ax.plot(lon_smooth, lon_values_smooth, color=colors[0], linewidth=2)
+    ax.fill_between(lon_smooth, 0, lon_values_smooth, alpha=0.4, color=colors[1])
+    
+    # 设置范围和格式
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(0, None)
+    ax.tick_params(axis='y', labelsize=28)
+    ax.tick_params(axis='x', labelsize=28)
+    
+    # 格式化y轴
+    ax.yaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0))
+    
+    offset_text = ax.yaxis.get_offset_text()
+    offset_text.set_fontsize(28)
+    
+    # 美化图表
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # ax.set_xlabel('Longitude', fontsize=12)
+    # ax.set_ylabel(label, fontsize=12)
+    
+    # 设置x轴刻度
+    # ax.set_xticks([-180, -90, 0, 90, 180])
+    ax.set_xlabel('')
+    # ax.set_ylabel('')
+    ax.set_xticklabels([])
+    # ax.set_yticklabels([])
+    ax.tick_params(axis='x', which='both', length=0)
+    
+    return ax
+
+def create_latitude_profile_colored(data, column, ax=None, colors=None, label=''):
+    """创建纬度方向的彩色曲线图"""
+    plt.rcParams['font.family'] = 'Arial'
+    
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(2, 10), dpi=500)
+    
+    # 根据数据类型选择默认颜色
+    if colors is None:
+        colors = ['#ff0000', '#cc0000']  # 默认红色
+        
+    # 按纬度分组计算sum值
+    lat_bins = np.arange(-90, 91, 2)  # 2度一组
+    lat_centers = (lat_bins[:-1] + lat_bins[1:]) / 2
+    lat_values = []
+    
+    for i in range(len(lat_bins)-1):
+        mask = (data['lat'] >= lat_bins[i]) & (data['lat'] < lat_bins[i+1])
+        if mask.any():
+            lat_values.append(data.loc[mask, column].sum())
+        else:
+            lat_values.append(0)
+    
+    # 平滑曲线
+    if len(lat_centers) > 3:
+        lat_smooth = np.linspace(min(lat_centers), max(lat_centers), 300)
+        spline = make_interp_spline(lat_centers, lat_values, k=3)
+        lat_values_smooth = spline(lat_smooth)
+        lat_values_smooth = np.maximum(lat_values_smooth, 0)
+    else:
+        lat_smooth = lat_centers
+        lat_values_smooth = lat_values
+    
+    # 绘制曲线
+    ax.plot(lat_values_smooth, lat_smooth, color=colors[0], linewidth=2)
+    ax.fill_betweenx(lat_smooth, 0, lat_values_smooth, alpha=0.4, color=colors[1])
+    
+    # 设置范围和格式
+    ax.set_ylim(-90, 90)
+    ax.set_xlim(0, None)
+    ax.tick_params(axis='x', labelsize=28)
+    ax.tick_params(axis='y', labelsize=28)
+    
+    # 格式化x轴
+    ax.xaxis.set_major_formatter(ScalarFormatter(useMathText=True))
+    ax.ticklabel_format(axis='x', style='sci', scilimits=(0,0))
+    
+    offset_text = ax.xaxis.get_offset_text()
+    offset_text.set_fontsize(28)
+    # 美化图表
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    # ax.set_ylabel('Latitude', fontsize=12)
+    # ax.set_xlabel(label, fontsize=12)
+    
+    # 设置y轴刻度
+    # ax.set_yticks([-90, -45, 0, 45, 90])
+    # ax.set_xlabel('')
+    ax.set_ylabel('')
+    # ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.tick_params(axis='x', which='both', length=0)
+    
+    return ax
+
+def load_and_process_data():
+    """加载并处理所有数据"""
+    print("正在加载数据...")
+    
+    # 1. 加载成本数据
+    cost_file = 'island_cost_summary_0.csv'
+    cost_df = pd.read_csv(cost_file)
+    
+    # 2. 加载供暖需求数据
+    demand_folder = '../demand_get/data/get1/'
+    demand_files = glob.glob(os.path.join(demand_folder, 'demand_*.csv'))
+    
+    heating_demand_data = []
+    for file in demand_files:
+        filename = os.path.basename(file)
+        coords = filename.replace('demand_', '').replace('.csv', '')
+        lat, lon = map(float, coords.split('_'))
+        
+        demand_df = pd.read_csv(file)
+        total_heating = demand_df['heating_demand'].sum()
+        
+        heating_demand_data.append({
+            'lat': lat,
+            'lon': lon,
+            'total_heating_demand': total_heating
+        })
+    
+    heating_df = pd.DataFrame(heating_demand_data)
+    
+    # 3. 合并数据
+    merged_df = pd.merge(cost_df, heating_df, on=['lat', 'lon'])
+    
+    # 4. 计算WT和WEC季节性差异
+    seasonal_data = []
+    data_path = '../result/output_0'
+    
+    print(f"正在处理 {len(merged_df)} 个岛屿的WT和WEC数据...")
+    
+    for _, island in tqdm(merged_df.iterrows(), total=len(merged_df), desc="处理季节性数据"):
+        lat, lon = island['lat'], island['lon']
+        output_file = f"{lat}_{lon}_results.csv"
+        output_file_path = os.path.join(data_path, output_file)
+        
+        wt_seasonal_cv = 0.0  # 初始化WT变异系数
+        wec_seasonal_cv = 0.0  # 初始化WEC变异系数
+        
+        if os.path.exists(output_file_path):
+            try:
+                system_output = pd.read_csv(output_file_path)
+                
+                # --- 计算 WT 季节性变异系数 ---
+                if 'WT' in system_output.columns:
+                    wt_data = system_output['WT'].values
+                    if len(wt_data) >= 240:  # 至少需要240个数据点(约1个月)
+                        start_date = '2020-01-01'
+                        hours = pd.date_range(start=start_date, periods=len(wt_data), freq='3H')  # 3小时频率
+                        ts = pd.Series(wt_data, index=hours)
+
+                        # 按月分组计算平均值
+                        monthly_means = ts.resample('M').mean()
+                        # 过滤掉发电量很小的月份
+                        monthly_mean_filtered = monthly_means[monthly_means > 0.01]
+
+                        if len(monthly_mean_filtered) >= 2:  # 至少需要2个有效月份
+                            # 计算变异系数 (标准差/平均值)
+                            wt_seasonal_cv = monthly_mean_filtered.std() / monthly_mean_filtered.mean()
+                        else:
+                            wt_seasonal_cv = 0
+
+                # --- 计算 WEC 季节性变异系数 ---
+                if 'WEC' in system_output.columns:
+                    wec_data = system_output['WEC'].values
+                    if len(wec_data) >= 240:  # 至少需要240个数据点(约1个月)
+                        start_date = '2020-01-01'
+                        hours = pd.date_range(start=start_date, periods=len(wec_data), freq='3H')  # 3小时频率
+                        ts = pd.Series(wec_data, index=hours)
+
+                        # 按月分组计算平均值
+                        monthly_means = ts.resample('M').mean()
+                        # 过滤掉发电量很小的月份
+                        monthly_mean_filtered = monthly_means[monthly_means > 0.01]
+
+                        if len(monthly_mean_filtered) >= 2:  # 至少需要2个有效月份
+                            # 计算变异系数 (标准差/平均值)
+                            wec_seasonal_cv = monthly_mean_filtered.std() / monthly_mean_filtered.mean()
+                        else:
+                            wec_seasonal_cv = 0
+
+            except:
+                pass
+        
+        seasonal_data.append({
+            'lat': lat,
+            'lon': lon,
+            'wt_seasonal_cv': wt_seasonal_cv,
+            'wec_seasonal_cv': wec_seasonal_cv
+        })
+    
+    seasonal_df = pd.DataFrame(seasonal_data)
+    final_df = pd.merge(merged_df, seasonal_df, on=['lat', 'lon'])
+    
+    print(f"最终数据: {len(final_df)} 个岛屿")
+    return final_df
+
+def create_latlon_distribution_plots():
+    """创建三个全球地图对应的经纬向分布图"""
+    
+    # 加载数据
+    data = load_and_process_data()
+    
+    # 定义三种数据和对应颜色
+    plot_configs = [
+        {
+            'data': data[data['total_heating_demand'] > 0],
+            'column': 'total_heating_demand',
+            'title': 'Heating Demand Distribution',
+            'colors': ['#cb181d', '#fc9272'],  # 红色系
+            'ylabel_lon': 'Total Heating\\nDemand (kWh)',
+            'xlabel_lat': 'Total Heating Demand (kWh)'
+        },
+        {
+            'data': data[data['wt_seasonal_cv'] > 1.1],
+            'column': 'wt_seasonal_cv',
+            'title': 'WT Seasonal Variability Distribution',
+            'colors': ['#2171b5', '#6baed6'],  # 蓝色系
+            'ylabel_lon': 'WT Seasonal\\nVariability',
+            'xlabel_lat': 'WT Seasonal Variability'
+        },
+        {
+            'data': data[data['wec_seasonal_cv'] > 1.1],
+            'column': 'wec_seasonal_cv',
+            'title': 'WEC Seasonal Variability Distribution',
+            'colors': ['#238b45', '#74c476'],  # 绿色系
+            'ylabel_lon': 'WEC Seasonal\\nVariability',
+            'xlabel_lat': 'WEC Seasonal Variability'
+        }
+    ]
+    
+    # 为每种数据类型创建经纬向分布图
+    for i, config in enumerate(plot_configs):
+        plot_data = config['data']
+        column = config['column']
+        title = config['title']
+        colors = config['colors']
+        ylabel_lon = config['ylabel_lon']
+        xlabel_lat = config['xlabel_lat']
+        
+        if len(plot_data) == 0:
+            print(f"没有{title}数据，跳过")
+            continue
+            
+        print(f"\n创建 {title} 的独立经纬向分布图...")
+        print(f"数据点数量: {len(plot_data)}")
+        
+        # --- 创建并显示独立的经度分布图 ---
+        fig_lon, ax_lon = plt.subplots(figsize=(14, 1.5), dpi=300) # 调整了figsize以适应独立图
+        create_longitude_profile_colored(plot_data, column, ax_lon, colors, ylabel_lon)
+        # ax_lon.set_title(f'{title} - Longitude Distribution', fontsize=14, pad=20)
+        plt.tight_layout()
+        plt.show()
+
+        # --- 创建并显示独立的纬度分布图 ---
+        fig_lat, ax_lat = plt.subplots(figsize=(2, 10), dpi=300) # 调整了figsize以适应独立图
+        create_latitude_profile_colored(plot_data, column, ax_lat, colors, xlabel_lat)
+        # ax_lat.set_title(f'{title} - Latitude Distribution', fontsize=14, pad=20)
+        plt.tight_layout()
+        plt.show()
+        
+        # 输出统计信息
+        print(f"{title} 统计:")
+        print(f"  经度范围: {plot_data['lon'].min():.1f}° to {plot_data['lon'].max():.1f}°")
+        print(f"  纬度范围: {plot_data['lat'].min():.1f}° to {plot_data['lat'].max():.1f}°")
+        print(f"  数值范围: {plot_data[column].min():.2f} to {plot_data[column].max():.2f}")
+
+# 执行创建经纬向分布图
+create_latlon_distribution_plots()

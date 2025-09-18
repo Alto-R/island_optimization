@@ -5,14 +5,23 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+from scipy import stats
 
+
+def set_axis_scientific(ax):
+      ax.ticklabel_format(style='sci', axis='both', scilimits=(0, 0), useMathText=True)
+      ax.xaxis.offsetText.set_fontsize(20)  # 增大科学计数法字体
+      ax.xaxis.offsetText.set_fontfamily('Arial')
+      ax.yaxis.offsetText.set_fontsize(20)  # 增大科学计数法字体
+      ax.yaxis.offsetText.set_fontfamily('Arial')
+      
 def run_island_energy_cost_analysis():
     """
     对岛屿能源系统的成本进行全面的回归分析和多重共线性检验。
     This function performs a comprehensive regression analysis and multicollinearity check for island energy system costs.
     """
     # --- 0. 环境设置 (Environment Setup) ---
-    sns.set(style="whitegrid", rc={'figure.dpi': 100})
+    sns.set(style="white", rc={'figure.dpi': 300})  # 使用white样式避免网格线
 
     # --- 1. 数据加载与预处理 (Data Loading and Preprocessing) ---
     print("开始加载和处理数据 (Starting to load and process data)...")
@@ -293,8 +302,191 @@ def run_island_energy_cost_analysis():
     plt.savefig('regression/multicollinearity_analysis1.png', dpi=300, bbox_inches='tight')
     plt.close()
     print("图3已保存为 multicollinearity_analysis.png")
+
+    # --- 辅助函数 (Helper Functions) ---
+    def get_significance_stars(p_value):
+        """根据p值返回显著性星号"""
+        if p_value < 0.001:
+            return '***'
+        elif p_value < 0.01:
+            return '**'
+        elif p_value < 0.05:
+            return '*'
+        else:
+            return ''
+
+    # --- 图 4: 竖排三个散点回归图 (Three Vertical Scatter Regression Plots) ---
+    print("正在生成竖排三个散点回归图 (Generating three vertical scatter regression plots)...")
+
+    # 准备数据，筛选有效数据
+    plot_data = final_df.copy()
+
+    # 检查数据可用性
+    wave_storage_data = plot_data[(plot_data['Total Wave Utilization'] > 100) &
+                                  (plot_data['Wave Seasonal Variation'] > 0.2)].copy()
+    wind_lng_data = plot_data[plot_data['Wind Seasonal Variation'] > 0.1].copy()
+    wind_total_data = plot_data[plot_data['Wind Seasonal Variation'] > 0.1].copy()
+
+    # 检查是否有足够的数据
+    data_available = [len(wave_storage_data) >= 2, len(wind_lng_data) >= 2, len(wind_total_data) >= 2]
+
+    if any(data_available):
+        # 创建2x1的子图布局，第一个是波浪能图，第二个是风能双y轴图
+        fig, axes = plt.subplots(2, 1, figsize=(14, 10))  # 调整为2个子图
+        fig.subplots_adjust(hspace=0.4)  # 增加子图间距以避免重叠
+
+        # 第一个图：波浪能季节变异性 vs 储能成本
+        ax1 = axes[0]
+        if data_available[0]:
+            x_data = wave_storage_data['Wave Seasonal Variation']
+            y_data = wave_storage_data['Storage Cost']
+            color = '#2E8B57'  # 海绿色
+
+            # 散点图 - 更大的点
+            ax1.scatter(x_data, y_data, s=20, c=color, alpha=0.7, edgecolors='none')
+
+            # 回归分析
+            slope, intercept, r_value, p_value, std_err = stats.linregress(x_data, y_data)
+
+            # 回归线
+            x_reg = np.linspace(x_data.min(), x_data.max(), 100)
+            y_reg = slope * x_reg + intercept
+            ax1.plot(x_reg, y_reg, color='black', linewidth=2, alpha=0.8)
+
+            # 获取显著性星号
+            stars = get_significance_stars(p_value)
+
+            # 添加R²和显著性星号的注释
+            ax1.text(0.05, 0.95, f'R² = {r_value**2:.3f}{stars}', transform=ax1.transAxes,
+                    fontsize=24, fontfamily='Arial', verticalalignment='top',
+                    bbox=dict(boxstyle='round,pad=0.4', facecolor='white', alpha=0.8, edgecolor='none'))
+
+            # 设置科学计数法
+            set_axis_scientific(ax1)
+        else:
+            ax1.text(0.5, 0.5, 'Insufficient data', ha='center', va='center',
+                   transform=ax1.transAxes, fontsize=24, color='gray', fontfamily='Arial')
+
+        # 设置第一个图的标签和格式
+        ax1.set_xlabel('Wave seasonal variability', fontsize=28, fontfamily='Arial')  # 增大字体
+        ax1.set_ylabel('Storage Cost(USD/per)', fontsize=28, fontfamily='Arial')  # 增大字体
+        ax1.tick_params(axis='both', which='major', labelsize=28, width=1, length=4)  # 增大刻度标签字体
+
+        # 设置刻度标签字体
+        for label in ax1.get_xticklabels() + ax1.get_yticklabels():
+            label.set_fontfamily('Arial')
+
+        # 移除顶部和右侧边框，确保无网格
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['left'].set_linewidth(1)
+        ax1.spines['left'].set_color('black')  # 确保左边框为黑色
+        ax1.spines['bottom'].set_linewidth(1)
+        ax1.spines['bottom'].set_color('black')  # 确保底边框为黑色
+        ax1.grid(False)  # 确保无网格线
+
+        # 第二个图：风能季节变异性的双y轴图
+        ax2 = axes[1]
+
+        if data_available[1] and data_available[2]:
+            # 创建第二个y轴
+            ax2_right = ax2.twinx()
+
+            # 左y轴：LNG成本 (蓝色)
+            x_data_lng = wind_lng_data['Wind Seasonal Variation']
+            y_data_lng = wind_lng_data['LNG Cost']
+            color_lng = '#4682B4'  # 钢蓝色
+
+            # 散点图 - LNG成本
+            ax2.scatter(x_data_lng, y_data_lng, s=20, c=color_lng, alpha=0.7, edgecolors='none', label='LNG cost')
+
+            # 回归分析 - LNG
+            slope_lng, intercept_lng, r_value_lng, p_value_lng, std_err_lng = stats.linregress(x_data_lng, y_data_lng)
+            x_reg_lng = np.linspace(x_data_lng.min(), x_data_lng.max(), 100)
+            y_reg_lng = slope_lng * x_reg_lng + intercept_lng
+            ax2.plot(x_reg_lng, y_reg_lng, color=color_lng, linewidth=2, alpha=0.8)
+
+            # 右y轴：总成本 (红色)
+            x_data_total = wind_total_data['Wind Seasonal Variation']
+            y_data_total = wind_total_data['Total Cost']
+            color_total = '#DC143C'  # 深红色
+
+            # 散点图 - 总成本
+            ax2_right.scatter(x_data_total, y_data_total, s=20, c=color_total, alpha=0.7, edgecolors='none', label='Total cost')
+
+            # 回归分析 - 总成本
+            slope_total, intercept_total, r_value_total, p_value_total, std_err_total = stats.linregress(x_data_total, y_data_total)
+            x_reg_total = np.linspace(x_data_total.min(), x_data_total.max(), 100)
+            y_reg_total = slope_total * x_reg_total + intercept_total
+            ax2_right.plot(x_reg_total, y_reg_total, color=color_total, linewidth=2, alpha=0.8)
+
+            # 获取显著性星号
+            stars_lng = get_significance_stars(p_value_lng)
+            stars_total = get_significance_stars(p_value_total)
+
+            # 添加R²注释 - LNG (左上角)
+            ax2.text(0.05, 0.95, f'LNG: R² = {r_value_lng**2:.3f}{stars_lng}', transform=ax2.transAxes,
+                    fontsize=24, fontfamily='Arial', verticalalignment='top', color=color_lng,
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8, edgecolor='none'))
+
+            # 添加R²注释 - 总成本 (右上角)
+            ax2.text(0.95, 0.95, f'Total: R² = {r_value_total**2:.3f}{stars_total}', transform=ax2.transAxes,
+                    fontsize=24, fontfamily='Arial', verticalalignment='top', horizontalalignment='right', color=color_total,
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8, edgecolor='none'))
+
+            # 设置左y轴标签 - 保持黑色
+            ax2.set_ylabel('LNG Cost(USD/per)', fontsize=28, fontfamily='Arial', color='black')  # 坐标轴标签为黑色
+            ax2.tick_params(axis='y', labelcolor='black', labelsize=28, width=1, length=4)  # 刻度标签为黑色
+            ax2.spines['left'].set_color('black')  # 坐标轴为黑色
+
+            # 设置右y轴标签 - 保持黑色
+            ax2_right.set_ylabel('Total Cost(USD/per)', fontsize=28, fontfamily='Arial', color='black')  # 坐标轴标签为黑色
+            ax2_right.tick_params(axis='y', labelcolor='black', labelsize=28, width=1, length=4)  # 刻度标签为黑色
+            ax2_right.spines['right'].set_color('black')  # 坐标轴为黑色
+
+            # 调整右y轴的范围，使数据点在图中显示更高，分离两条回归线
+            y_total_min, y_total_max = ax2_right.get_ylim()
+            y_total_range = y_total_max - y_total_min
+            # 将右y轴的下限向下扩展，使数据相对位置更高
+            ax2_right.set_ylim(y_total_min - y_total_range * 0.3, y_total_max)
+
+            # 设置科学计数法
+            set_axis_scientific(ax2)
+            set_axis_scientific(ax2_right)
+
+        else:
+            ax2.text(0.5, 0.5, 'Insufficient data', ha='center', va='center',
+                   transform=ax2.transAxes, fontsize=28, color='gray', fontfamily='Arial')
+
+        # 设置第二个图的x轴标签
+        ax2.set_xlabel('Wind seasonal variability', fontsize=28, fontfamily='Arial')  # 增大字体
+        ax2.tick_params(axis='x', labelsize=28, width=1, length=4)  # 增大刻度标签字体
+
+        # 设置x轴刻度标签字体
+        for label in ax2.get_xticklabels():
+            label.set_fontfamily('Arial')
+
+        # 移除顶部和右侧顶部边框，确保无网格
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['bottom'].set_linewidth(1)
+        ax2.spines['bottom'].set_color('black')  # 确保底边框为黑色
+        ax2.grid(False)  # 确保无网格线
+        ax2_right.grid(False)  # 确保右y轴也无网格线
+        ax2_right.spines['top'].set_visible(False)  # 移除右y轴的顶部边框
+
+        # 对齐y轴标签
+        fig.align_ylabels([ax1, ax2])
+
+        plt.tight_layout()
+        plt.savefig('regression/combined_scatter_plots.png', dpi=300, bbox_inches='tight')
+        plt.close()
+        print("合并散点回归图已保存为 combined_scatter_plots.png")
+    else:
+        print("所有图表的数据都不足，无法生成散点回归图")
+
     print("\n所有分析和绘图已完成 (All analysis and plotting complete)!")
 
 # 运行主函数
 if __name__ == '__main__':
     run_island_energy_cost_analysis()
+    
